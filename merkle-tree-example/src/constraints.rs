@@ -41,24 +41,27 @@ impl ConstraintSynthesizer<ConstraintF> for MerkleTreeVerification {
         let leaf = UInt8::new_input(ark_relations::ns!(cs, "leaf_var"), || Ok(&self.leaf))?;
 
         // Then, we allocate the public parameters as constants:
-        let leaf_crh_params = LeafHashParamsVar::new_constant(cs.clone(), &self.leaf_crh_params)?;
+        let leaf_crh_params = LeafHashParamsVar::new_constant(cs.clone(), 
+                                                                     &self.leaf_crh_params)?;
         let two_to_one_crh_params =
             TwoToOneHashParamsVar::new_constant(cs.clone(), &self.two_to_one_crh_params)?;
 
         // Finally, we allocate our path as a private witness variable:
-        let path = SimplePathVar::new_witness(ark_relations::ns!(cs, "path_var"), || {
+        let path = SimplePathVar::new_witness(
+            ark_relations::ns!(cs, "path_var"), || {
             Ok(self.authentication_path.as_ref().unwrap())
         })?;
 
-        let leaf_bytes = vec![leaf; 1];
+        let leaf_bytes:&[UInt8<ConstraintF>] = &[leaf];
 
         // Now, we have to check membership. How do we do that?
         // Hint: look at https://github.com/arkworks-rs/crypto-primitives/blob/6be606259eab0aec010015e2cfd45e4f134cd9bf/src/merkle_tree/constraints.rs#L135
 
         // TODO: FILL IN THE BLANK!
-        // let is_member = XYZ
-        //
-        // is_member.enforce_equal(&Boolean::TRUE)?;
+        let is_member = path.verify_membership(
+            &leaf_crh_params, &two_to_one_crh_params,
+            &root, &leaf_bytes).unwrap();
+        is_member.enforce_equal(&Boolean::TRUE)?;
 
         Ok(())
     }
